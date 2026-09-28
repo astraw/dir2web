@@ -169,7 +169,7 @@ pub async fn render(
         } else if is_video(&e.name) {
             let _ = writeln!(
                 body,
-                "<tr><td class=\"icon\"><a href=\"{enc}?play\"><img loading=\"lazy\" \
+                "<tr><td class=\"icon\"><a href=\"{enc}?play\"><img loading=\"lazy\" width=\"160\" height=\"90\" \
                  src=\"{enc}?thumb&amp;v={}\" alt=\"\"></a></td>\
                  <td><a href=\"{enc}?play\">{name}</a><a class=\"orig\" href=\"{enc}\">original</a></td>\
                  <td class=\"mtime\">{}</td><td class=\"size\">{}</td></tr>",

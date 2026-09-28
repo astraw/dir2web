@@ -44,7 +44,7 @@ td { padding: 3px 12px 3px 0; vertical-align: middle; }
 td.size, td.mtime { white-space: nowrap; color: #555; font-variant-numeric: tabular-nums; }
 td.size { text-align: right; }
 td.icon { width: 164px; text-align: center; }
-td.icon img { max-width: 160px; max-height: 90px; display: block; margin: auto; background: #eee; }
+td.icon img { width: 160px; height: 90px; object-fit: contain; display: block; margin: auto; background: #eee; }
 tr:hover { background: #f4f4f4; }
 a { color: #0645ad; text-decoration: none; }
 a:hover { text-decoration: underline; }
