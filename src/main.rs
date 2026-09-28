@@ -225,6 +225,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/_dir2web/status/{key}", get(hls::status))
+        .route(hls::HLS_JS_URL, get(hls::hls_js))
         .route("/_dir2web/hls/{key}/{file}", get(hls::serve_hls_file))
         .fallback(serve_path)
         .with_state(st.clone());

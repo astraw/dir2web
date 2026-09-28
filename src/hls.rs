@@ -29,6 +29,22 @@ use crate::{
     media::{cache_key, child_command, ffmpeg_input, probe_duration},
 };
 
+/// hls.js (light build), for browsers without native HLS. Its URL carries the
+/// version so it can be cached forever.
+const HLS_JS: &[u8] = include_bytes!("../static/hls.light.min.js");
+pub const HLS_JS_URL: &str = "/_dir2web/static/hls-1.7.3.light.min.js";
+
+pub async fn hls_js() -> Response {
+    (
+        [
+            (header::CONTENT_TYPE, "text/javascript; charset=utf-8"),
+            (header::CACHE_CONTROL, "public, max-age=31536000, immutable"),
+        ],
+        HLS_JS,
+    )
+        .into_response()
+}
+
 /// Target segment length in seconds.
 const SEGMENT_SECS: u32 = 2;
 
@@ -197,14 +213,49 @@ const v = document.getElementById("v");
 const status = document.getElementById("status");
 let started = false;
 function fmt(s) {{ return s == null ? "?" : s.toFixed(0) + " s"; }}
+function play() {{
+  v.play().catch(() => {{ v.muted = true; v.play().catch(() => {{}}); }});
+}}
+// Safari's native HLS is excellent; Chrome's native HLS mishandles growing
+// EVENT playlists (no duration, seeks ignored), so everything else uses
+// hls.js over MSE, falling back to native HLS only when MSE is missing.
+// ?player=hlsjs or ?player=native forces one or the other.
+const forced = new URLSearchParams(location.search).get("player");
+const canNative = v.canPlayType("application/vnd.apple.mpegurl") !== "";
+const isSafari = /Safari\//.test(navigator.userAgent) &&
+  !/Chrome|Chromium|CriOS|FxiOS|Edg|Android/.test(navigator.userAgent);
+let useNative = forced === "native" || (forced !== "hlsjs" && canNative && isSafari);
+function loadHlsJs() {{
+  return new Promise((resolve, reject) => {{
+    const el = document.createElement("script");
+    el.src = "{hls_js_url}";
+    el.onload = resolve;
+    el.onerror = () => reject(new Error("could not load hls.js"));
+    document.head.appendChild(el);
+  }});
+}}
+function attach() {{
+  const url = "/_dir2web/hls/" + key + "/index.m3u8";
+  if (useNative) {{ v.src = url; play(); return; }}
+  const hls = new Hls({{ startPosition: 0 }});
+  let recovered = false;
+  hls.on(Hls.Events.ERROR, (_, d) => {{
+    if (!d.fatal) return;
+    if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {{ hls.startLoad(); }}
+    else if (d.type === Hls.ErrorTypes.MEDIA_ERROR && !recovered) {{ recovered = true; hls.recoverMediaError(); }}
+    else {{ status.textContent = "Playback error: " + d.details; hls.destroy(); }}
+  }});
+  hls.on(Hls.Events.MANIFEST_PARSED, play);
+  hls.loadSource(url);
+  hls.attachMedia(v);
+}}
 async function poll() {{
   let s;
   try {{ s = await (await fetch("/_dir2web/status/" + key, {{cache: "no-store"}})).json(); }}
   catch (e) {{ status.textContent = "Status error: " + e; setTimeout(poll, 2000); return; }}
   if (!started && s.segments > 0) {{
     started = true;
-    v.src = "/_dir2web/hls/" + key + "/index.m3u8";
-    v.play().catch(() => {{ v.muted = true; v.play().catch(() => {{}}); }});
+    attach();
   }}
   if (s.state === "failed") {{ status.textContent = "Preview failed: " + s.error; return; }}
   if (s.state === "done") {{ status.textContent = "Preview complete (" + fmt(s.seconds) + ")."; return; }}
@@ -213,14 +264,20 @@ async function poll() {{
     + fmt(s.seconds) + " of " + fmt(s.duration);
   setTimeout(poll, started ? 2000 : 300);
 }}
-if (!v.canPlayType("application/vnd.apple.mpegurl")) {{
-  status.textContent = "This browser cannot play HLS natively; use Safari, or open the original.";
-}} else {{
+(useNative ? Promise.resolve() : loadHlsJs()).then(() => {{
+  if (!useNative && !Hls.isSupported()) {{
+    if (!canNative) {{
+      status.textContent = "This browser supports neither HLS nor MSE; open the original instead.";
+      return;
+    }}
+    useNative = true;
+  }}
   poll();
-}}
+}}, (e) => {{ status.textContent = e.message; }});
 </script>"#,
         size = human_size(meta.len()),
         name = escape(&name),
+        hls_js_url = HLS_JS_URL,
     );
     Ok(Html(page(&name, &body)).into_response())
 }

@@ -36,13 +36,27 @@ Entries are keyed by a hash of the canonical path, size, mtime and output
 settings, so changed files or settings produce new entries. Nothing is evicted
 yet; delete the directory to reclaim space.
 
-Playback currently relies on native HLS, i.e. Safari.
+Safari plays the HLS preview natively. Other browsers use a vendored copy of
+[hls.js](https://github.com/video-dev/hls.js) (light build, Apache-2.0, in
+`static/`), compiled into the binary. Chrome's own native HLS is deliberately
+not used: it mishandles the growing playlist (no duration, seeks ignored).
+Append `&player=hlsjs` or `&player=native` to a player URL to force either.
+
+## Browser test
+
+`tests/browser/play.mjs` drives the player page in headless Chromium,
+Firefox or (Linux) WebKit via Playwright, logging playback start, seeks and
+buffering while the transcode runs. It expects a video of at least 240 s.
+
+```sh
+cd tests/browser && npm i --no-save playwright && npx playwright install chromium firefox webkit
+node play.mjs firefox 'http://127.0.0.1:8080/some.mp4?play'
+```
 
 ## Not yet
 
 - Scrubbing beyond the transcoded portion (publish the full VOD playlist up
   front and produce segments on demand with `-ss`).
-- `hls.js` for Chrome/Firefox.
 - Cache size limit / LRU eviction.
 - `.fmf` / `.ufmf` via strand-braid.
 - Authentication.
