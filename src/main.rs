@@ -35,7 +35,7 @@ struct Cli {
     root: PathBuf,
     /// Address to listen on. There is no authentication, so only bind to
     /// trusted networks.
-    #[arg(long, default_value = "127.0.0.1:8080")]
+    #[arg(long, default_value = "127.0.0.1:37326")]
     listen: SocketAddr,
     /// Cache directory (default: the user cache dir, e.g. ~/.cache/dir2web).
     #[arg(long)]

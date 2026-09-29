@@ -10,7 +10,7 @@ cargo build --release
 ```
 
 There is **no authentication**: anyone who can reach the port can read every
-file under the base directory. The default `--listen` is `127.0.0.1:8080`;
+file under the base directory. The default `--listen` is `127.0.0.1:37326`;
 only bind wider on a trusted LAN. See `--help` for the preview and
 concurrency knobs.
 
@@ -50,7 +50,7 @@ buffering while the transcode runs. It expects a video of at least 240 s.
 
 ```sh
 cd tests/browser && npm i --no-save playwright && npx playwright install chromium firefox webkit
-node play.mjs firefox 'http://127.0.0.1:8080/some.mp4?play'
+node play.mjs firefox 'http://127.0.0.1:37326/some.mp4?play'
 ```
 
 ## Not yet
