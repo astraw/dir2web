@@ -5,8 +5,8 @@ thumbnail in the listing, and clicking one opens a player that starts a
 low-resolution preview within a second or so, even for multi-GB files.
 
 ```sh
-cargo build --release
-./target/release/dir2web /path/to/base --listen 0.0.0.0:8080
+cargo install dir2web   # or, from a checkout: cargo build --release
+dir2web /path/to/base --listen 0.0.0.0:8080
 ```
 
 There is **no authentication**: anyone who can reach the port can read every
@@ -60,3 +60,11 @@ node play.mjs firefox 'http://127.0.0.1:37326/some.mp4?play'
 - Cache size limit / LRU eviction.
 - `.fmf` / `.ufmf` via strand-braid.
 - Authentication.
+
+## License
+
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or
+[MIT license](LICENSE-MIT) at your option.
+
+The embedded [hls.js](https://github.com/video-dev/hls.js) in `static/` is
+Apache-2.0; see `static/hls.js-LICENSE`.

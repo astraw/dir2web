@@ -2,6 +2,14 @@
 name = "dir2web"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.98"
+authors = ["Andrew Straw <strawman@astraw.com>"]
+description = "Serve a directory tree over HTTP with Apache-style indices, video thumbnails and instant transcoded HLS previews"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/astraw/dir2web"
+readme = "README.md"
+keywords = ["http", "directory-listing", "video", "hls", "ffmpeg"]
+categories = ["command-line-utilities", "web-programming::http-server", "multimedia::video"]
 
 [dependencies]
 anyhow = "1.0.104"
