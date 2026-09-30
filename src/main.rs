@@ -151,6 +151,14 @@ async fn serve_path(State(st): State<Arc<AppState>>, req: Request) -> Result<Res
             }
             return Ok(Redirect::permanent(&to).into_response());
         }
+        // Like Apache's DirectoryIndex: a directory's own index.html wins
+        // over the generated listing (unless it resolves outside the root).
+        if let Ok(index) = tokio::fs::canonicalize(path.join("index.html")).await
+            && index.starts_with(&st.root)
+            && tokio::fs::metadata(&index).await.is_ok_and(|m| m.is_file())
+        {
+            return Ok(ServeFile::new(&index).oneshot(req).await.into_response());
+        }
         return listing::render(&st, &path, &uri_path, query).await;
     }
     if query_has(query, "thumb") {

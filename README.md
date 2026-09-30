@@ -19,8 +19,8 @@ Requires `ffmpeg` and `ffprobe` (with libx264) in `PATH`.
 ## How it works
 
 - `/<path>/` — directory index (sortable by name, mtime, size; dotfiles hidden
-  unless `--hidden`). Paths resolving outside the base directory, including
-  via symlinks, are 404.
+  unless `--hidden`), or the directory's own `index.html` if it has one.
+  Paths resolving outside the base directory, including via symlinks, are 404.
 - `/<path>` — the original file, with HTTP range support (so browsers can
   seek in directly playable files).
 - `/<path>?thumb` — JPEG thumbnail from ~10% into the video, extracted lazily
