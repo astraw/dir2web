@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # Linux carries the OS-agnostic checks (fmt, clippy, the
+  # THIRD-PARTY-LICENSES hls.js sanity check) on top of the test suite.
+  check:
+    name: lint + test (linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Verify THIRD-PARTY-LICENSES retains the hls.js entry
+        run: |
+          if ! grep -q '^- package_name: hls.js$' THIRD-PARTY-LICENSES \
+             || ! grep -q 'Copyright (c) 2017 Dailymotion' THIRD-PARTY-LICENSES; then
+            echo "::error::THIRD-PARTY-LICENSES is missing the hand-maintained hls.js entry — re-add it after regenerating (see CONTRIBUTING.md)."
+            exit 1
+          fi
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Clippy (warnings denied)
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test
+
+  # Release binaries are built for macOS too, so make sure it compiles and
+  # the tests pass there.
+  test-macos:
+    name: test (macos)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Test
+        run: cargo test
