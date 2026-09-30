@@ -16,6 +16,19 @@ concurrency knobs.
 
 Requires `ffmpeg` and `ffprobe` (with libx264) in `PATH`.
 
+## Install
+
+Prebuilt binaries for Linux (x86_64 and aarch64, glibc or static musl) and
+macOS (Intel and Apple silicon) are attached to each
+[GitHub release](https://github.com/astraw/dir2web/releases). Download and
+unpack the archive for your platform, or use the installer script:
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astraw/dir2web/releases/latest/download/dir2web-installer.sh | sh
+```
+
+Or build from source with `cargo install dir2web`.
+
 ## How it works
 
 - `/<path>/` — directory index (sortable by name, mtime, size; dotfiles hidden
