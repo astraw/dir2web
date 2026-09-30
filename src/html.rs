@@ -69,13 +69,16 @@ article.markdown img { max-width: 100%; }
 footer a { color: #999; }
 "#;
 
+/// Shown at the bottom of every generated page.
+const FOOTER: &str = r#"<footer><a href="https://github.com/astraw/dir2web">dir2web</a></footer>"#;
+
 pub fn page(title: &str, body: &str) -> String {
     let mut s = String::new();
     let _ = write!(
         s,
         "<!DOCTYPE html>\n<html><head><meta charset=\"utf-8\">\
          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\
-         <title>{}</title><style>{STYLE}</style></head><body>\n{body}\n</body></html>\n",
+         <title>{}</title><style>{STYLE}</style></head><body>\n{body}\n{FOOTER}\n</body></html>\n",
         escape(title)
     );
     s

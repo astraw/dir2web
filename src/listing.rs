@@ -224,6 +224,5 @@ pub async fn render(
     if let Some(readme) = readme(st, dir, &entries).await {
         body.push_str(&readme);
     }
-    body.push_str("<footer><a href=\"https://github.com/astraw/dir2web\">dir2web</a></footer>\n");
     Ok(Html(page(&title, &body)).into_response())
 }
