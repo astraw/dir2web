@@ -5,6 +5,7 @@ mod cache;
 mod hls;
 mod html;
 mod listing;
+mod markdown;
 mod media;
 mod paths;
 
@@ -175,6 +176,9 @@ async fn serve_path(State(st): State<Arc<AppState>>, req: Request) -> Result<Res
     }
     if query_has(query, "play") {
         return hls::play_page(&st, &path, &meta, &uri_path).await;
+    }
+    if query_has(query, "view") && markdown::is_markdown(path.as_os_str()) {
+        return markdown::view_page(&path, &meta, &uri_path).await;
     }
     Ok(ServeFile::new(&path).oneshot(req).await.into_response())
 }

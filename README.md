@@ -20,9 +20,14 @@ Requires `ffmpeg` and `ffprobe` (with libx264) in `PATH`.
 
 - `/<path>/` — directory index (sortable by name, mtime, size; dotfiles hidden
   unless `--hidden`), or the directory's own `index.html` if it has one.
+  A `README.md` in the directory is rendered below the listing.
   Paths resolving outside the base directory, including via symlinks, are 404.
 - `/<path>` — the original file, with HTTP range support (so browsers can
   seek in directly playable files).
+- `/<path>?view` — a Markdown file (`.md`, `.markdown`, …) rendered as
+  GitHub-flavoured HTML, up to 16 MiB. Raw HTML is passed through unsanitized,
+  since the served files are trusted. Headings get GitHub-style anchors, and
+  relative links to other Markdown files open rendered too.
 - `/<path>?thumb` — JPEG thumbnail from ~10% into the video, extracted lazily
   and cached.
 - `/<path>?play` — player page. Starts (or joins) a transcode of the video to

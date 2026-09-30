@@ -12,6 +12,7 @@ use axum::response::{Html, IntoResponse, Response};
 use crate::{
     AppError, AppState,
     html::{escape, human_size, page},
+    markdown::{self, is_markdown},
     media::is_video,
     paths::encode_segment,
     query_get,
@@ -84,6 +85,29 @@ fn version_token(e: &Entry) -> String {
         .map(|d| d.as_secs())
         .unwrap_or(0);
     format!("{secs}-{}", e.size)
+}
+
+/// The rendered README section for a listing, if the directory has a
+/// README.md (or other Markdown extension) inside the root.
+async fn readme(st: &AppState, dir: &Path, entries: &[Entry]) -> Option<String> {
+    let e = entries.iter().find(|e| {
+        !e.is_dir
+            && is_markdown(&e.name)
+            && Path::new(&e.name)
+                .file_stem()
+                .is_some_and(|s| s.eq_ignore_ascii_case("readme"))
+    })?;
+    let path = tokio::fs::canonicalize(dir.join(&e.name)).await.ok()?;
+    if !path.starts_with(&st.root) {
+        return None;
+    }
+    let meta = tokio::fs::metadata(&path).await.ok()?;
+    let html = markdown::render_file(&path, &meta).await.ok()??;
+    Some(markdown::readme_section(
+        &e.name.to_string_lossy(),
+        &encode_segment(&e.name),
+        &html,
+    ))
 }
 
 pub async fn render(
@@ -177,6 +201,15 @@ pub async fn render(
                 fmt_mtime(e.mtime),
                 human_size(e.size)
             );
+        } else if is_markdown(&e.name) {
+            let _ = writeln!(
+                body,
+                "<tr><td class=\"icon\">📝</td>\
+                 <td><a href=\"{enc}?view\">{name}</a><a class=\"orig\" href=\"{enc}\">original</a></td>\
+                 <td class=\"mtime\">{}</td><td class=\"size\">{}</td></tr>",
+                fmt_mtime(e.mtime),
+                human_size(e.size)
+            );
         } else {
             let _ = writeln!(
                 body,
@@ -188,6 +221,9 @@ pub async fn render(
         }
     }
     body.push_str("</table>\n");
+    if let Some(readme) = readme(st, dir, &entries).await {
+        body.push_str(&readme);
+    }
     body.push_str("<footer><a href=\"https://github.com/astraw/dir2web\">dir2web</a></footer>\n");
     Ok(Html(page(&title, &body)).into_response())
 }

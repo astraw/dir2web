@@ -52,6 +52,20 @@ a.orig { font-size: 0.85em; color: #777; margin-left: 0.5em; }
 video { width: 100%; max-width: 1280px; background: #000; }
 #status { color: #555; font-variant-numeric: tabular-nums; }
 footer { margin-top: 2em; font-size: 0.8em; }
+section.readme { margin-top: 2em; border-top: 1px solid #ccc; }
+.readme-name { margin: 0.6em 0; font-size: 0.85em; color: #777; }
+.readme-name a { color: inherit; }
+article.markdown { max-width: 52em; line-height: 1.5; }
+article.markdown h1 { font-size: 1.8em; border-bottom: 1px solid #ddd; padding-bottom: 0.2em; }
+article.markdown h2 { font-size: 1.4em; border-bottom: 1px solid #eee; padding-bottom: 0.2em; }
+article.markdown code { background: #f3f4f6; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.9em; }
+article.markdown pre { background: #f3f4f6; padding: 0.8em 1em; overflow: auto; border-radius: 4px; }
+article.markdown pre code { background: none; padding: 0; }
+article.markdown table { border-collapse: collapse; }
+article.markdown th, article.markdown td { border: 1px solid #ddd; padding: 4px 10px; }
+article.markdown tr:hover { background: none; }
+article.markdown blockquote { margin-left: 0; padding-left: 1em; border-left: 4px solid #ddd; color: #555; }
+article.markdown img { max-width: 100%; }
 footer a { color: #999; }
 "#;
 
