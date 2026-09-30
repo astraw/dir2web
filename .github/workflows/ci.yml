@@ -6,7 +6,7 @@ on:
 
 jobs:
   # Linux carries the OS-agnostic checks (fmt, clippy, the
-  # THIRD-PARTY-LICENSES hls.js sanity check) on top of the test suite.
+  # THIRD-PARTY-LICENSES completeness check) on top of the test suite.
   check:
     name: lint + test (linux)
     runs-on: ubuntu-latest
@@ -14,11 +14,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Verify THIRD-PARTY-LICENSES retains the hls.js entry
+      - name: Verify THIRD-PARTY-LICENSES is complete
         run: |
           if ! grep -q '^- package_name: hls.js$' THIRD-PARTY-LICENSES \
              || ! grep -q 'Copyright (c) 2017 Dailymotion' THIRD-PARTY-LICENSES; then
             echo "::error::THIRD-PARTY-LICENSES is missing the hand-maintained hls.js entry — re-add it after regenerating (see CONTRIBUTING.md)."
+            exit 1
+          fi
+          if grep -n 'NOT FOUND' THIRD-PARTY-LICENSES; then
+            echo "::error::THIRD-PARTY-LICENSES has a license text marked NOT FOUND — fill it in (see CONTRIBUTING.md)."
             exit 1
           fi
 

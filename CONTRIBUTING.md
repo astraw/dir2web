@@ -35,8 +35,14 @@ into dir2web; it is bundled into every release archive. If you add, remove, or
 upgrade a dependency, regenerate it:
 
 ```sh
-cargo bundle-licenses --format yaml --prefer MIT --output THIRD-PARTY-LICENSES
+cargo bundle-licenses --format yaml --prefer MIT --previous THIRD-PARTY-LICENSES --output THIRD-PARTY-LICENSES
 ```
+
+`--previous` carries over license texts that were filled in by hand because
+the published crate ships none (currently `valuable`, whose text is from
+upstream's `LICENSE` at the matching tag). If the output contains
+`NOT FOUND` for another crate, fill it in the same way; CI rejects the file
+otherwise.
 
 Then re-add the hand-maintained `hls.js` entry at the end (with the text of
 `static/hls.js-LICENSE`, and the version updated if hls.js was upgraded) —
