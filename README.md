@@ -33,8 +33,11 @@ Requires `ffmpeg` and `ffprobe` (with libx264) in `PATH`.
 
 The cache lives in `~/.cache/dir2web` (`$XDG_CACHE_HOME`, or `--cache-dir`).
 Entries are keyed by a hash of the canonical path, size, mtime and output
-settings, so changed files or settings produce new entries. Nothing is evicted
-yet; delete the directory to reclaim space.
+settings, so changed files or settings produce new entries. The cache is kept
+under `--max-cache-size` (default `10G`; `0` for no limit) by evicting the
+least recently used thumbnails and previews, down to 90% of the limit. Entries
+used in the last 5 minutes and transcodes in progress are never evicted, so the
+cache can briefly exceed the limit by what is in active use.
 
 Safari plays the HLS preview natively. Other browsers use a vendored copy of
 [hls.js](https://github.com/video-dev/hls.js) (light build, Apache-2.0, in
@@ -57,7 +60,6 @@ node play.mjs firefox 'http://127.0.0.1:37326/some.mp4?play'
 
 - Scrubbing beyond the transcoded portion (publish the full VOD playlist up
   front and produce segments on demand with `-ss`).
-- Cache size limit / LRU eviction.
 - `.fmf` / `.ufmf` via strand-braid.
 - Authentication.
 

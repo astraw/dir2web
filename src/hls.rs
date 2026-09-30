@@ -6,6 +6,7 @@
 //! that the cached preview is served directly, even across restarts.
 
 use std::{
+    collections::HashSet,
     fs::Metadata,
     path::{Path, PathBuf},
     process::Stdio,
@@ -19,12 +20,12 @@ use axum::{
     response::{Html, IntoResponse, Response},
 };
 use serde::Serialize;
-use tokio::sync::Semaphore;
+use tokio::sync::{Notify, Semaphore};
 use tower::ServiceExt;
 use tower_http::services::ServeFile;
 
 use crate::{
-    AppError, AppState, PreviewConfig,
+    AppError, AppState, PreviewConfig, cache,
     html::{escape, human_size, page},
     media::{cache_key, child_command, ffmpeg_input, probe_duration},
 };
@@ -74,6 +75,22 @@ fn job_dir(st: &AppState, key: &str) -> PathBuf {
     st.cache.join("hls").join(key)
 }
 
+/// Keys of transcodes that are queued or running, which must not be evicted.
+pub fn active_keys(st: &AppState) -> HashSet<String> {
+    st.jobs
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|(_, j)| {
+            matches!(
+                *j.state.lock().unwrap(),
+                JobState::Queued | JobState::Running
+            )
+        })
+        .map(|(k, _)| k.clone())
+        .collect()
+}
+
 fn valid_key(key: &str) -> bool {
     key.len() == 32 && key.bytes().all(|b| b.is_ascii_hexdigit())
 }
@@ -82,6 +99,7 @@ fn valid_key(key: &str) -> bool {
 fn ensure_job(st: &AppState, key: &str, src: &Path) -> anyhow::Result<()> {
     let dir = job_dir(st, key);
     if dir.join("done").exists() {
+        cache::touch(&dir);
         return Ok(());
     }
     let mut jobs = st.jobs.lock().unwrap();
@@ -105,11 +123,16 @@ fn ensure_job(st: &AppState, key: &str, src: &Path) -> anyhow::Result<()> {
         state: Mutex::new(JobState::Queued),
     });
     jobs.insert(key.to_owned(), job.clone());
-    tokio::spawn(run_job(job, st.transcode_sem.clone(), st.cfg.clone()));
+    tokio::spawn(run_job(
+        job,
+        st.transcode_sem.clone(),
+        st.cfg.clone(),
+        st.cache_sweep.clone(),
+    ));
     Ok(())
 }
 
-async fn run_job(job: Arc<Job>, sem: Arc<Semaphore>, cfg: PreviewConfig) {
+async fn run_job(job: Arc<Job>, sem: Arc<Semaphore>, cfg: PreviewConfig, sweep: Arc<Notify>) {
     *job.duration.lock().unwrap() = probe_duration(&job.src).await;
     let Ok(_permit) = sem.acquire_owned().await else {
         return;
@@ -128,6 +151,7 @@ async fn run_job(job: Arc<Job>, sem: Arc<Semaphore>, cfg: PreviewConfig) {
         }
     };
     *job.state.lock().unwrap() = new_state;
+    sweep.notify_one();
 }
 
 async fn transcode(job: &Job, cfg: &PreviewConfig) -> anyhow::Result<()> {
@@ -321,8 +345,9 @@ pub async fn status(
             match &*j.state.lock().unwrap() {
                 JobState::Queued => ("queued", d, None),
                 JobState::Running => ("running", d, None),
-                // The marker is written before the state flips, so this is rare.
-                JobState::Done => ("done", d, None),
+                // The marker is written before the state flips, so a finished
+                // job without one has been evicted from the cache.
+                JobState::Done => ("missing", None, None),
                 JobState::Failed(e) => ("failed", d, Some(e.clone())),
             }
         }

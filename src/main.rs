@@ -1,6 +1,7 @@
 //! dir2web: browse a directory tree over HTTP with Apache-style indices,
 //! video thumbnails, and quick-start transcoded HLS previews.
 
+mod cache;
 mod hls;
 mod html;
 mod listing;
@@ -23,7 +24,7 @@ use axum::{
     routing::get,
 };
 use clap::Parser;
-use tokio::sync::Semaphore;
+use tokio::sync::{Notify, Semaphore};
 use tower::ServiceExt;
 use tower_http::services::ServeFile;
 
@@ -61,6 +62,10 @@ struct Cli {
     /// Maximum number of simultaneous thumbnail extractions.
     #[arg(long, default_value_t = 4)]
     max_thumbnailers: usize,
+    /// Maximum cache size, e.g. 10G or 500M (binary units); least recently
+    /// used thumbnails and previews are evicted beyond it. 0 means no limit.
+    #[arg(long, default_value = "10G", value_parser = cache::parse_size)]
+    max_cache_size: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -81,6 +86,10 @@ pub struct AppState {
     pub transcode_sem: Arc<Semaphore>,
     pub thumb_sem: Semaphore,
     pub thumb_locks: Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>,
+    /// Cache size limit in bytes (0: unlimited).
+    pub max_cache_bytes: u64,
+    /// Notified when the cache has grown, to trigger an eviction sweep.
+    pub cache_sweep: Arc<Notify>,
 }
 
 /// An error rendered as a plain-text HTTP response.
@@ -229,7 +238,10 @@ async fn main() -> anyhow::Result<()> {
         transcode_sem: Arc::new(Semaphore::new(cli.max_transcodes.max(1))),
         thumb_sem: Semaphore::new(cli.max_thumbnailers.max(1)),
         thumb_locks: Mutex::new(HashMap::new()),
+        max_cache_bytes: cli.max_cache_size,
+        cache_sweep: Arc::new(Notify::new()),
     });
+    tokio::spawn(cache::sweeper(st.clone()));
 
     let app = Router::new()
         .route("/_dir2web/status/{key}", get(hls::status))
@@ -241,11 +253,18 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(cli.listen)
         .await
         .with_context(|| format!("binding {}", cli.listen))?;
+    let cache_dir = st.cache.clone();
+    let used = tokio::task::spawn_blocking(move || cache::usage(&cache_dir)).await?;
+    let limit = match st.max_cache_bytes {
+        0 => "unlimited".to_owned(),
+        n => html::human_size(n),
+    };
     tracing::info!(
-        "serving {} on http://{} (cache: {})",
+        "serving {} on http://{} (cache: {}, {} of {limit})",
         st.root.display(),
         cli.listen,
-        st.cache.display()
+        st.cache.display(),
+        html::human_size(used)
     );
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())

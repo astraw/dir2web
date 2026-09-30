@@ -18,7 +18,7 @@ use axum::{
 use sha2::{Digest, Sha256};
 use tokio::process::Command;
 
-use crate::{AppError, AppState};
+use crate::{AppError, AppState, cache};
 
 const VIDEO_EXTS: &[&str] = &[
     "mp4", "m4v", "mov", "mkv", "webm", "avi", "mts", "m2ts", "ts", "mpg", "mpeg", "wmv", "flv",
@@ -169,12 +169,16 @@ pub async fn thumbnail(st: &AppState, src: &Path, meta: &Metadata) -> Result<Res
         locks.entry(key.clone()).or_default().clone()
     };
     let guard = lock.lock().await;
-    if tokio::fs::metadata(&jpg).await.is_err()
-        && tokio::fs::metadata(&fail).await.is_err()
-        && let Err(e) = generate_thumb(st, src, &jpg).await
-    {
-        tracing::warn!("thumbnail for {} failed: {e:#}", src.display());
-        let _ = tokio::fs::write(&fail, format!("{e:#}\n")).await;
+    if tokio::fs::metadata(&jpg).await.is_ok() {
+        cache::touch(&jpg);
+    } else if tokio::fs::metadata(&fail).await.is_err() {
+        match generate_thumb(st, src, &jpg).await {
+            Ok(()) => st.cache_sweep.notify_one(),
+            Err(e) => {
+                tracing::warn!("thumbnail for {} failed: {e:#}", src.display());
+                let _ = tokio::fs::write(&fail, format!("{e:#}\n")).await;
+            }
+        }
     }
     drop(guard);
     {
