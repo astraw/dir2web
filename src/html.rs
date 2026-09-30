@@ -51,6 +51,8 @@ a:hover { text-decoration: underline; }
 a.orig { font-size: 0.85em; color: #777; margin-left: 0.5em; }
 video { width: 100%; max-width: 1280px; background: #000; }
 #status { color: #555; font-variant-numeric: tabular-nums; }
+footer { margin-top: 2em; font-size: 0.8em; }
+footer a { color: #999; }
 "#;
 
 pub fn page(title: &str, body: &str) -> String {

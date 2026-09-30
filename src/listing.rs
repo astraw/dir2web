@@ -188,5 +188,6 @@ pub async fn render(
         }
     }
     body.push_str("</table>\n");
+    body.push_str("<footer><a href=\"https://github.com/astraw/dir2web\">dir2web</a></footer>\n");
     Ok(Html(page(&title, &body)).into_response())
 }
