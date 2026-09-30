@@ -42,9 +42,6 @@ struct Cli {
     /// Cache directory (default: the user cache dir, e.g. ~/.cache/dir2web).
     #[arg(long)]
     cache_dir: Option<PathBuf>,
-    /// Show and serve dotfiles.
-    #[arg(long)]
-    hidden: bool,
     /// Maximum width of preview videos, in pixels.
     #[arg(long, default_value_t = 640)]
     preview_width: u32,
@@ -81,7 +78,6 @@ pub struct AppState {
     /// Canonicalized base directory.
     pub root: PathBuf,
     pub cache: PathBuf,
-    pub show_hidden: bool,
     pub cfg: PreviewConfig,
     pub jobs: Mutex<HashMap<String, Arc<hls::Job>>>,
     pub transcode_sem: Arc<Semaphore>,
@@ -149,7 +145,7 @@ async fn serve_path(State(st): State<Arc<AppState>>, req: Request) -> Result<Res
     let uri_path = req.uri().path().to_owned();
     let query = req.uri().query().map(str::to_owned);
     let query = query.as_deref();
-    let path = paths::resolve(&st.root, st.show_hidden, &uri_path).await?;
+    let path = paths::resolve(&st.root, &uri_path).await?;
     let meta = tokio::fs::metadata(&path).await?;
 
     if meta.is_dir() {
@@ -231,7 +227,6 @@ async fn main() -> anyhow::Result<()> {
     let st = Arc::new(AppState {
         root,
         cache,
-        show_hidden: cli.hidden,
         cfg: PreviewConfig {
             width: cli.preview_width,
             fps_max: cli.preview_fps_max,

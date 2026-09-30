@@ -31,8 +31,8 @@ Or build from source with `cargo install dir2web`.
 
 ## How it works
 
-- `/<path>/` — directory index (sortable by name, mtime, size; dotfiles hidden
-  unless `--hidden`), or the directory's own `index.html` if it has one.
+- `/<path>/` — directory index (sortable by name, mtime, size; dotfiles
+  included), or the directory's own `index.html` if it has one.
   A `README.md` in the directory is rendered below the listing.
   Paths resolving outside the base directory, including via symlinks, are 404.
 - `/<path>` — the original file, with HTTP range support (so browsers can

@@ -42,14 +42,11 @@ impl SortKey {
     }
 }
 
-fn read_entries(dir: &Path, show_hidden: bool) -> std::io::Result<Vec<Entry>> {
+fn read_entries(dir: &Path) -> std::io::Result<Vec<Entry>> {
     let mut out = Vec::new();
     for de in std::fs::read_dir(dir)? {
         let de = de?;
         let name = de.file_name();
-        if !show_hidden && name.as_encoded_bytes().first() == Some(&b'.') {
-            continue;
-        }
         // Follow symlinks; fall back to the link itself if it dangles.
         let meta = match std::fs::metadata(de.path()) {
             Ok(m) => m,
@@ -117,8 +114,7 @@ pub async fn render(
     query: Option<&str>,
 ) -> Result<Response, AppError> {
     let dir2 = dir.to_path_buf();
-    let show_hidden = st.show_hidden;
-    let mut entries = tokio::task::spawn_blocking(move || read_entries(&dir2, show_hidden))
+    let mut entries = tokio::task::spawn_blocking(move || read_entries(&dir2))
         .await
         .map_err(anyhow::Error::from)??;
 
