@@ -78,7 +78,6 @@ node play.mjs firefox 'http://127.0.0.1:37326/some.mp4?play'
 
 - Scrubbing beyond the transcoded portion (publish the full VOD playlist up
   front and produce segments on demand with `-ss`).
-- `.fmf` / `.ufmf` via strand-braid.
 - Authentication.
 
 ## License
