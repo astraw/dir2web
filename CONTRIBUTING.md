@@ -36,6 +36,7 @@ upgrade a dependency, regenerate it:
 
 ```sh
 cargo bundle-licenses --format yaml --prefer MIT --previous THIRD-PARTY-LICENSES --output THIRD-PARTY-LICENSES
+cat static/THIRD-PARTY-LICENSES.yaml >> THIRD-PARTY-LICENSES
 ```
 
 `--previous` carries over license texts that were filled in by hand because
@@ -44,10 +45,11 @@ upstream's `LICENSE` at the matching tag). If the output contains
 `NOT FOUND` for another crate, fill it in the same way; CI rejects the file
 otherwise.
 
-Then re-add the hand-maintained `hls.js` entry at the end (with the text of
-`static/hls.js-LICENSE`, and the version updated if hls.js was upgraded) —
-hls.js is embedded from `static/` rather than being a Cargo dependency, so
-the generator cannot see it. CI checks that the entry is present.
+The second line appends `static/THIRD-PARTY-LICENSES.yaml`, the
+hand-maintained entries for the JavaScript and WebAssembly files embedded
+from `static/` (such as hls.js): they are not Cargo dependencies, so the
+generator cannot see them. When adding or upgrading one of those files,
+update its entry there. CI checks that `THIRD-PARTY-LICENSES` ends with it.
 
 ## Releasing
 

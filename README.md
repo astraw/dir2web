@@ -85,5 +85,6 @@ node play.mjs firefox 'http://127.0.0.1:37326/some.mp4?play'
 Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or
 [MIT license](LICENSE-MIT) at your option.
 
-The embedded [hls.js](https://github.com/video-dev/hls.js) in `static/` is
-Apache-2.0; see `static/hls.js-LICENSE`.
+The JavaScript embedded from `static/`, such as
+[hls.js](https://github.com/video-dev/hls.js) (Apache-2.0), keeps its own
+license; see `THIRD-PARTY-LICENSES`, which also covers the Rust dependencies.

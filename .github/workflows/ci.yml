@@ -16,9 +16,9 @@ jobs:
 
       - name: Verify THIRD-PARTY-LICENSES is complete
         run: |
-          if ! grep -q '^- package_name: hls.js$' THIRD-PARTY-LICENSES \
-             || ! grep -q 'Copyright (c) 2017 Dailymotion' THIRD-PARTY-LICENSES; then
-            echo "::error::THIRD-PARTY-LICENSES is missing the hand-maintained hls.js entry — re-add it after regenerating (see CONTRIBUTING.md)."
+          if ! tail -c "$(wc -c < static/THIRD-PARTY-LICENSES.yaml)" THIRD-PARTY-LICENSES \
+               | cmp -s - static/THIRD-PARTY-LICENSES.yaml; then
+            echo "::error::THIRD-PARTY-LICENSES does not end with static/THIRD-PARTY-LICENSES.yaml — append it after regenerating (see CONTRIBUTING.md)."
             exit 1
           fi
           if grep -n 'NOT FOUND' THIRD-PARTY-LICENSES; then

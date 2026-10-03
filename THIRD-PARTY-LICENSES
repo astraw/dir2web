@@ -4411,6 +4411,9 @@ third_party_libraries:
       OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
       IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
       DEALINGS IN THE SOFTWARE.
+# Hand-maintained entries for the JavaScript and WebAssembly files embedded
+# from static/, which cargo-bundle-licenses cannot see. Appended verbatim to
+# THIRD-PARTY-LICENSES after regenerating it (see CONTRIBUTING.md).
 - package_name: hls.js
   package_version: 1.7.3
   repository: https://github.com/video-dev/hls.js
