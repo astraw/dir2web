@@ -41,6 +41,12 @@ Or build from source with `cargo install dir2web`.
   GitHub-flavoured HTML, up to 16 MiB. Raw HTML is passed through unsanitized,
   since the served files are trusted. Headings get GitHub-style anchors, and
   relative links to other Markdown files open rendered too.
+- `/<path>?view` — a 3D model (`.glb`, `.gltf`) in an interactive viewer
+  (rotate, zoom, pan; animations play), using Google's
+  [`<model-viewer>`](https://modelviewer.dev). Draco- and meshopt-compressed
+  meshes and KTX2 textures work; their decoders are embedded too, so nothing
+  is fetched from the internet. A `.gltf`'s external buffers and textures are
+  loaded from beside it.
 - `/<path>?thumb` — JPEG thumbnail from ~10% into the video, extracted lazily
   and cached.
 - `/<path>?play` — player page. Starts (or joins) a transcode of the video to
@@ -72,6 +78,16 @@ buffering while the transcode runs. It expects a video of at least 240 s.
 ```sh
 cd tests/browser && npm i --no-save playwright && npx playwright install chromium firefox webkit
 node play.mjs firefox 'http://127.0.0.1:37326/some.mp4?play'
+```
+
+`tests/browser/model.mjs` loads a 3D model view page, waits for the model to
+load, fails if any request left the dir2web server, and can save a
+screenshot. Headless Firefox has no WebGL without a GPU; run it headed under
+Xvfb instead:
+
+```sh
+node model.mjs chromium 'http://127.0.0.1:37326/model.glb?view' shot.png
+HEADED=1 xvfb-run -a node model.mjs firefox 'http://127.0.0.1:37326/model.glb?view'
 ```
 
 ## Not yet

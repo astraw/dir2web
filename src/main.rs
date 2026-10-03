@@ -1,12 +1,14 @@
 //! dir2web: browse a directory tree over HTTP with Apache-style indices,
 //! video thumbnails, and quick-start transcoded HLS previews.
 
+mod assets;
 mod cache;
 mod hls;
 mod html;
 mod listing;
 mod markdown;
 mod media;
+mod model;
 mod paths;
 
 use std::{
@@ -177,8 +179,13 @@ async fn serve_path(State(st): State<Arc<AppState>>, req: Request) -> Result<Res
     if query_has(query, "play") {
         return hls::play_page(&st, &path, &meta, &uri_path).await;
     }
-    if query_has(query, "view") && markdown::is_markdown(path.as_os_str()) {
-        return markdown::view_page(&path, &meta, &uri_path).await;
+    if query_has(query, "view") {
+        if markdown::is_markdown(path.as_os_str()) {
+            return markdown::view_page(&path, &meta, &uri_path).await;
+        }
+        if model::is_model(path.as_os_str()) {
+            return Ok(model::view_page(&path, &meta, &uri_path));
+        }
     }
     Ok(ServeFile::new(&path).oneshot(req).await.into_response())
 }
@@ -249,7 +256,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/_dir2web/status/{key}", get(hls::status))
-        .route(hls::HLS_JS_URL, get(hls::hls_js))
+        .route("/_dir2web/static/{*path}", get(assets::serve))
         .route("/_dir2web/hls/{key}/{file}", get(hls::serve_hls_file))
         .fallback(serve_path)
         .with_state(st.clone());

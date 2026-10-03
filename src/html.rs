@@ -50,6 +50,7 @@ a { color: #0645ad; text-decoration: none; }
 a:hover { text-decoration: underline; }
 a.orig { font-size: 0.85em; color: #777; margin-left: 0.5em; }
 video { width: 100%; max-width: 1280px; background: #000; }
+model-viewer { display: block; width: 100%; max-width: 1280px; height: 75vh; background: #f3f4f6; }
 #status { color: #555; font-variant-numeric: tabular-nums; }
 footer { margin-top: 2em; font-size: 0.8em; }
 section.readme { margin-top: 2em; border-top: 1px solid #ccc; }

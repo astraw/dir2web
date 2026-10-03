@@ -25,26 +25,10 @@ use tower::ServiceExt;
 use tower_http::services::ServeFile;
 
 use crate::{
-    AppError, AppState, PreviewConfig, cache,
+    AppError, AppState, PreviewConfig, assets, cache,
     html::{escape, human_size, page},
     media::{cache_key, child_command, ffmpeg_input, probe_duration},
 };
-
-/// hls.js (light build), for browsers without native HLS. Its URL carries the
-/// version so it can be cached forever.
-const HLS_JS: &[u8] = include_bytes!("../static/hls.light.min.js");
-pub const HLS_JS_URL: &str = "/_dir2web/static/hls-1.7.3.light.min.js";
-
-pub async fn hls_js() -> Response {
-    (
-        [
-            (header::CONTENT_TYPE, "text/javascript; charset=utf-8"),
-            (header::CACHE_CONTROL, "public, max-age=31536000, immutable"),
-        ],
-        HLS_JS,
-    )
-        .into_response()
-}
 
 /// Target segment length in seconds.
 const SEGMENT_SECS: u32 = 2;
@@ -301,7 +285,7 @@ async function poll() {{
 </script>"#,
         size = human_size(meta.len()),
         name = escape(&name),
-        hls_js_url = HLS_JS_URL,
+        hls_js_url = assets::HLS_JS,
     );
     Ok(Html(page(&name, &body)).into_response())
 }

@@ -14,6 +14,7 @@ use crate::{
     html::{escape, human_size, page},
     markdown::{self, is_markdown},
     media::is_video,
+    model::is_model,
     paths::encode_segment,
     query_get,
 };
@@ -201,10 +202,11 @@ pub async fn render(
                 fmt_mtime(e.mtime),
                 human_size(e.size)
             );
-        } else if is_markdown(&e.name) {
+        } else if is_markdown(&e.name) || is_model(&e.name) {
+            let icon = if is_model(&e.name) { "🧊" } else { "📝" };
             let _ = writeln!(
                 body,
-                "<tr><td class=\"icon\">📝</td>\
+                "<tr><td class=\"icon\">{icon}</td>\
                  <td><a href=\"{enc}?view\">{name}</a><a class=\"orig\" href=\"{enc}\">original</a></td>\
                  <td class=\"mtime\">{}</td><td class=\"size\">{}</td></tr>",
                 fmt_mtime(e.mtime),

@@ -10,8 +10,9 @@ cargo clippy --all-targets -- -D warnings  # warnings are treated as errors
 cargo test
 ```
 
-`tests/browser/play.mjs` exercises the video player in real browsers; see
-the README. Run it after changing the player.
+`tests/browser/play.mjs` and `tests/browser/model.mjs` exercise the video
+player and the 3D model viewer in real browsers; see the README. Run them
+after changing either.
 
 ## Commit messages
 
