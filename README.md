@@ -27,6 +27,15 @@ unpack the archive for your platform, or use the installer script:
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astraw/dir2web/releases/latest/download/dir2web-installer.sh | sh
 ```
 
+This installs for the current user into `~/.cargo/bin` and adds that to
+`PATH` in your shell's startup files, which takes effect in new shells. To
+install system-wide into `/usr/local/bin` instead, which is already on `PATH`,
+set `DIR2WEB_UNMANAGED_INSTALL`:
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astraw/dir2web/releases/latest/download/dir2web-installer.sh | sudo env DIR2WEB_UNMANAGED_INSTALL=/usr/local/bin sh
+```
+
 Or build from source with `cargo install dir2web`.
 
 ## How it works
