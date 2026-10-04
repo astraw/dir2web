@@ -1,20 +1,25 @@
 name: release-plz
 
-permissions:
-  contents: write
-  pull-requests: write
-
 on:
   push:
     branches:
       - main
 
+# Each job asks for exactly what it needs. Only the built-in GITHUB_TOKEN is
+# used: crates.io is reached via trusted publishing (OIDC), and the binary
+# release workflow is started with workflow_dispatch, which GITHUB_TOKEN may
+# trigger (unlike tag pushes).
+permissions: {}
+
 jobs:
-  # Opens (or updates) a "release PR" that bumps crate versions and
+  # Opens (or updates) a "release PR" that bumps the crate version and
   # regenerates CHANGELOG.md from the Conventional Commit history.
   release-plz-pr:
     name: release-plz PR
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     concurrency:
       group: release-plz-${{ github.ref }}
       cancel-in-progress: false
@@ -23,6 +28,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Run release-plz
@@ -31,30 +37,46 @@ jobs:
           command: release-pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
-  # When a release PR is merged, publishes the changed crates to
-  # crates.io and creates git tags + GitHub releases. On ordinary
-  # pushes this job is a no-op.
+  # When a release PR is merged (release_always = false), publishes the crate
+  # to crates.io, pushes the vX.Y.Z tag, and starts the cargo-dist workflow
+  # (release.yml) that builds the binaries and creates the GitHub release.
+  # On ordinary pushes this job is a no-op.
   release-plz-release:
     name: release-plz release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the tag
+      pull-requests: read # tell whether this commit comes from a release PR
+      id-token: write # crates.io trusted publishing
+      actions: write # dispatch release.yml
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Run release-plz
+        id: release-plz
         uses: release-plz/action@v0.5
         with:
           command: release
         env:
-          # A Personal Access Token is required here instead of GITHUB_TOKEN.
-          # GitHub Actions will not trigger other workflow runs (e.g. cargo-dist)
-          # from events caused by the built-in GITHUB_TOKEN. The PAT must have
-          # `contents: write` and `pull-requests: write` scopes, and should be
-          # stored as a repository secret named RELEASE_PLZ_TOKEN.
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Only for the first publish of the crate, which crates.io trusted
+          # publishing cannot do. release-plz tries trusted publishing first
+          # and falls back to this token. Remove this line (and the secret)
+          # once v0.1.0 is on crates.io and the trusted publisher is set up.
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: Start the binary release
+        if: steps.release-plz.outputs.releases_created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASES: ${{ steps.release-plz.outputs.releases }}
+        run: |
+          for tag in $(echo "$RELEASES" | jq -r '.[].tag'); do
+            echo "Dispatching release.yml for $tag"
+            gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$tag" -f tag="$tag"
+          done

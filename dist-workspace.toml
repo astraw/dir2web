@@ -19,3 +19,8 @@ include = ["THIRD-PARTY-LICENSES"]
 install-path = "CARGO_HOME"
 # Whether to install an updater program
 install-updater = false
+# Start the release workflow with workflow_dispatch (given a tag) instead of
+# a tag push: release-plz dispatches it with the built-in GITHUB_TOKEN, which
+# cannot trigger workflows through a tag push, so no personal access token is
+# needed.
+dispatch-releases = true
