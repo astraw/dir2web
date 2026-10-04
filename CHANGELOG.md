@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1](https://github.com/astraw/dir2web/compare/v0.1.0...v0.1.1) - 2026-10-04
+
+### Other
+
+- publish from a protected release environment via trusted publishing only (Claude Opus 5.5)
+- suggest installing the binary into /usr/local/bin via DIR2WEB_UNMANAGED_INSTALL (Claude Opus 5.5)
+
 ## [0.1.0](https://github.com/astraw/dir2web/releases/tag/v0.1.0) - 2026-10-04
 
 ### Added
