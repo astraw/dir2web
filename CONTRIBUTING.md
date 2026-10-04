@@ -81,11 +81,15 @@ One-time setup:
 
 - GitHub, Settings → Actions → General → Workflow permissions: allow GitHub
   Actions to create and approve pull requests (for the release PR).
+- GitHub, Settings → Environments: an environment named `release`,
+  restricted to deployments from the `main` branch (and, optionally, with
+  required reviewers, which makes each release wait for an approval). The
+  publishing job runs in it; a `release-check` job first makes sure only
+  merges of release PRs get there.
 - crates.io, the crate's Settings → Trusted Publishing: add GitHub owner
-  `astraw`, repository `dir2web`, workflow `release-plz.yml`, no environment.
-  crates.io cannot do this before the crate exists, so the first release
-  (v0.1.0) is published with a short-lived API token in the
-  `CARGO_REGISTRY_TOKEN` secret, which is deleted afterwards.
+  `astraw`, repository `dir2web`, workflow `release-plz.yml`, environment
+  `release`. (crates.io cannot do this before a crate exists; v0.1.0 was
+  published with a one-off API token.)
 
 ## License
 
