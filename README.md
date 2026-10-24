@@ -38,6 +38,25 @@ curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astraw/dir2web/releases
 
 Or build from source with `cargo install dir2web`.
 
+## Over ssh
+
+To browse a remote machine without exposing the port, forward it over ssh:
+
+```sh
+ssh -L 37326:127.0.0.1:37326 remotehost dir2web /path/to/base
+```
+
+and open <http://127.0.0.1:37326>. dir2web exits when the ssh session ends,
+with or without `-t`: with a terminal it gets SIGHUP, and without one it
+watches stdin, which sshd closes on disconnect. Stdin is only watched when it
+is a pipe or socket, so running under systemd, `nohup` or with `</dev/null` is
+unaffected. `ssh -n` and `ssh -f` hand the remote command an already-closed
+stdin, so pass `--no-exit-on-stdin-eof` there.
+
+sshd only notices a session is gone when the TCP connection closes. After a
+network drop or a client suspend this can take hours, unless the server sets
+`ClientAliveInterval` (or the client `ServerAliveInterval`).
+
 ## How it works
 
 - `/<path>/` — directory index (sortable by name, mtime, size; dotfiles hidden

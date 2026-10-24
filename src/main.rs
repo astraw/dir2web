@@ -69,6 +69,11 @@ struct Cli {
     /// used thumbnails and previews are evicted beyond it. 0 means no limit.
     #[arg(long, default_value = "10G", value_parser = cache::parse_size)]
     max_cache_size: u64,
+    /// Keep running when stdin reaches end-of-file. By default, when stdin is
+    /// a pipe or socket (as when run by ssh without -t), its closing shuts
+    /// the server down, so a dropped ssh session does not leave it running.
+    #[arg(long)]
+    no_exit_on_stdin_eof: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -190,16 +195,69 @@ async fn serve_path(State(st): State<Arc<AppState>>, req: Request) -> Result<Res
     Ok(ServeFile::new(&path).oneshot(req).await.into_response())
 }
 
-/// Resolves on SIGINT or SIGTERM. Returning from main drops all tasks, which
-/// kills their ffmpeg children.
-async fn shutdown_signal() {
-    let mut term = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-        .expect("installing SIGTERM handler");
+/// Resolves on SIGINT, SIGTERM or SIGHUP, or when `stdin_closed` fires.
+/// Returning from main drops all tasks, which kills their ffmpeg children.
+async fn shutdown_signal(stdin_closed: Option<tokio::sync::oneshot::Receiver<()>>) {
+    use tokio::signal::unix::{SignalKind, signal};
+    let mut term = signal(SignalKind::terminate()).expect("installing SIGTERM handler");
+    let mut hup = signal(SignalKind::hangup()).expect("installing SIGHUP handler");
+    let stdin_closed = async {
+        match stdin_closed {
+            Some(rx) => {
+                let _ = rx.await;
+            }
+            None => std::future::pending().await,
+        }
+    };
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {}
         _ = term.recv() => {}
+        _ = hup.recv() => {}
+        _ = stdin_closed => {
+            tracing::info!(
+                "stdin closed; shutting down (pass --no-exit-on-stdin-eof to keep running)"
+            );
+        }
     }
     tracing::info!("shutting down");
+}
+
+/// If stdin is a pipe or socket, which is what ssh gives a command run
+/// without a terminal, spawns a thread that reads it to end-of-file and then
+/// fires the returned receiver. When the ssh session goes away, sshd closes
+/// the pipe. A terminal (covered by SIGHUP), /dev/null or a regular file is
+/// not watched. A plain thread is used because a pending
+/// `tokio::io::stdin()` read can hold up runtime shutdown.
+fn watch_stdin_eof() -> Option<tokio::sync::oneshot::Receiver<()>> {
+    // SAFETY: fstat only writes into the zeroed stat buffer we pass.
+    let mut st: libc::stat = unsafe { std::mem::zeroed() };
+    if unsafe { libc::fstat(libc::STDIN_FILENO, &mut st) } != 0 {
+        return None;
+    }
+    let fmt = st.st_mode & libc::S_IFMT;
+    if fmt != libc::S_IFIFO && fmt != libc::S_IFSOCK {
+        return None;
+    }
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    std::thread::Builder::new()
+        .name("stdin-eof".into())
+        .spawn(move || {
+            use std::io::Read;
+            let mut buf = [0u8; 4096];
+            let mut stdin = std::io::stdin().lock();
+            loop {
+                match stdin.read(&mut buf) {
+                    Ok(0) => break,
+                    Ok(_) => {}
+                    Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
+                    // An unreadable stdin says nothing about the session.
+                    Err(_) => return,
+                }
+            }
+            let _ = tx.send(());
+        })
+        .ok()?;
+    Some(rx)
 }
 
 #[tokio::main]
@@ -277,8 +335,13 @@ async fn main() -> anyhow::Result<()> {
         st.cache.display(),
         html::human_size(used)
     );
+    let stdin_closed = if cli.no_exit_on_stdin_eof {
+        None
+    } else {
+        watch_stdin_eof()
+    };
     axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
+        .with_graceful_shutdown(shutdown_signal(stdin_closed))
         .await?;
     Ok(())
 }
